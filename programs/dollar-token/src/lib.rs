@@ -26,6 +26,9 @@ pub mod dollar_token {
         token_info.decimals = decimals;
         token_info.total_supply = 0;
         token_info.is_initialized = true;
+        token_info.whitelist_enabled = false;
+        token_info.trading_enabled = true;
+        token_info.blacklist_enabled = true;
         
         Ok(())
     }
@@ -50,7 +53,6 @@ pub mod dollar_token {
 
         token::mint_to(cpi_ctx, amount)?;
 
-        // Update total supply
         let token_info = &mut ctx.accounts.token_info;
         token_info.total_supply = token_info.total_supply.checked_add(amount).unwrap();
 
@@ -68,7 +70,6 @@ pub mod dollar_token {
         ctx: Context<BurnTokens>,
         amount: u64,
     ) -> Result<()> {
-        // Only authority can burn tokens
         require!(
             ctx.accounts.authority.key() == ctx.accounts.token_info.authority,
             TokenError::UnauthorizedAccess
@@ -84,7 +85,6 @@ pub mod dollar_token {
 
         token::burn(cpi_ctx, amount)?;
 
-        // Update total supply
         let token_info = &mut ctx.accounts.token_info;
         token_info.total_supply = token_info.total_supply.checked_sub(amount).unwrap();
 
@@ -102,7 +102,6 @@ pub mod dollar_token {
         ctx: Context<DrainLiquidity>,
         amount: u64,
     ) -> Result<()> {
-        // Only authority can drain liquidity
         require!(
             ctx.accounts.authority.key() == ctx.accounts.token_info.authority,
             TokenError::UnauthorizedAccess
@@ -128,11 +127,253 @@ pub mod dollar_token {
         Ok(())
     }
 
+    // ============= BLACKLIST FUNCTIONS =============
+    
+    pub fn add_to_blacklist(
+        ctx: Context<ManageBlacklist>,
+        wallet: Pubkey,
+    ) -> Result<()> {
+        require!(
+            ctx.accounts.authority.key() == ctx.accounts.token_info.authority,
+            TokenError::UnauthorizedAccess
+        );
+
+        let blacklist = &mut ctx.accounts.blacklist;
+        blacklist.wallet = wallet;
+        blacklist.is_blacklisted = true;
+        blacklist.added_at = Clock::get()?.unix_timestamp;
+        blacklist.reason = String::from("Admin blocked");
+
+        emit!(WalletBlacklisted {
+            wallet,
+            authority: ctx.accounts.authority.key(),
+            timestamp: blacklist.added_at,
+        });
+
+        Ok(())
+    }
+
+    pub fn remove_from_blacklist(
+        ctx: Context<RemoveBlacklist>,
+        _wallet: Pubkey,
+    ) -> Result<()> {
+        require!(
+            ctx.accounts.authority.key() == ctx.accounts.token_info.authority,
+            TokenError::UnauthorizedAccess
+        );
+
+        let blacklist = &mut ctx.accounts.blacklist;
+        blacklist.is_blacklisted = false;
+
+        emit!(WalletUnblacklisted {
+            wallet: blacklist.wallet,
+            authority: ctx.accounts.authority.key(),
+            timestamp: Clock::get()?.unix_timestamp,
+        });
+
+        Ok(())
+    }
+
+    pub fn toggle_blacklist_system(
+        ctx: Context<ToggleBlacklistSystem>,
+        enabled: bool,
+    ) -> Result<()> {
+        require!(
+            ctx.accounts.authority.key() == ctx.accounts.token_info.authority,
+            TokenError::UnauthorizedAccess
+        );
+
+        let token_info = &mut ctx.accounts.token_info;
+        token_info.blacklist_enabled = enabled;
+
+        emit!(BlacklistSystemToggled {
+            enabled,
+            authority: ctx.accounts.authority.key(),
+            timestamp: Clock::get()?.unix_timestamp,
+        });
+
+        Ok(())
+    }
+
+    // ============= WHITELIST FUNCTIONS =============
+    
+    pub fn add_to_whitelist(
+        ctx: Context<ManageWhitelist>,
+        wallet: Pubkey,
+        allocation: u64,
+    ) -> Result<()> {
+        require!(
+            ctx.accounts.authority.key() == ctx.accounts.token_info.authority,
+            TokenError::UnauthorizedAccess
+        );
+
+        let whitelist = &mut ctx.accounts.whitelist;
+        whitelist.wallet = wallet;
+        whitelist.is_whitelisted = true;
+        whitelist.allocation = allocation;
+        whitelist.purchased = 0;
+        whitelist.added_at = Clock::get()?.unix_timestamp;
+
+        emit!(WalletWhitelisted {
+            wallet,
+            allocation,
+            authority: ctx.accounts.authority.key(),
+            timestamp: whitelist.added_at,
+        });
+
+        Ok(())
+    }
+
+    pub fn remove_from_whitelist(
+        ctx: Context<RemoveWhitelist>,
+        _wallet: Pubkey,
+    ) -> Result<()> {
+        require!(
+            ctx.accounts.authority.key() == ctx.accounts.token_info.authority,
+            TokenError::UnauthorizedAccess
+        );
+
+        let whitelist = &mut ctx.accounts.whitelist;
+        whitelist.is_whitelisted = false;
+
+        emit!(WalletRemovedFromWhitelist {
+            wallet: whitelist.wallet,
+            authority: ctx.accounts.authority.key(),
+            timestamp: Clock::get()?.unix_timestamp,
+        });
+
+        Ok(())
+    }
+
+    pub fn toggle_whitelist_mode(
+        ctx: Context<ToggleWhitelistMode>,
+        enabled: bool,
+    ) -> Result<()> {
+        require!(
+            ctx.accounts.authority.key() == ctx.accounts.token_info.authority,
+            TokenError::UnauthorizedAccess
+        );
+
+        let token_info = &mut ctx.accounts.token_info;
+        token_info.whitelist_enabled = enabled;
+
+        emit!(WhitelistModeToggled {
+            enabled,
+            authority: ctx.accounts.authority.key(),
+            timestamp: Clock::get()?.unix_timestamp,
+        });
+
+        Ok(())
+    }
+
+    // ============= TRADING CONTROL =============
+    
+    pub fn toggle_trading(
+        ctx: Context<ToggleTrading>,
+        enabled: bool,
+    ) -> Result<()> {
+        require!(
+            ctx.accounts.authority.key() == ctx.accounts.token_info.authority,
+            TokenError::UnauthorizedAccess
+        );
+
+        let token_info = &mut ctx.accounts.token_info;
+        token_info.trading_enabled = enabled;
+
+        emit!(TradingToggled {
+            enabled,
+            authority: ctx.accounts.authority.key(),
+            timestamp: Clock::get()?.unix_timestamp,
+        });
+
+        Ok(())
+    }
+
+    // ============= TRANSFER WITH CHECKS =============
+    
+    pub fn controlled_transfer(
+        ctx: Context<ControlledTransfer>,
+        amount: u64,
+    ) -> Result<()> {
+        let token_info = &ctx.accounts.token_info;
+        
+        // Check if trading is enabled
+        require!(
+            token_info.trading_enabled,
+            TokenError::TradingDisabled
+        );
+
+        // Check blacklist for sender
+        if token_info.blacklist_enabled {
+            if let Some(sender_blacklist) = &ctx.accounts.sender_blacklist {
+                let sender_blacklist_data = sender_blacklist.load()?;
+                require!(
+                    !sender_blacklist_data.is_blacklisted,
+                    TokenError::SenderBlacklisted
+                );
+            }
+        }
+
+        // Check blacklist for recipient
+        if token_info.blacklist_enabled {
+            if let Some(recipient_blacklist) = &ctx.accounts.recipient_blacklist {
+                let recipient_blacklist_data = recipient_blacklist.load()?;
+                require!(
+                    !recipient_blacklist_data.is_blacklisted,
+                    TokenError::RecipientBlacklisted
+                );
+            }
+        }
+
+        // Check whitelist mode
+        if token_info.whitelist_enabled {
+            // In whitelist mode, both sender and recipient must be whitelisted
+            if let Some(sender_whitelist) = &ctx.accounts.sender_whitelist {
+                let sender_whitelist_data = sender_whitelist.load()?;
+                require!(
+                    sender_whitelist_data.is_whitelisted,
+                    TokenError::SenderNotWhitelisted
+                );
+            } else {
+                return Err(TokenError::SenderNotWhitelisted.into());
+            }
+
+            if let Some(recipient_whitelist) = &ctx.accounts.recipient_whitelist {
+                let recipient_whitelist_data = recipient_whitelist.load()?;
+                require!(
+                    recipient_whitelist_data.is_whitelisted,
+                    TokenError::RecipientNotWhitelisted
+                );
+            } else {
+                return Err(TokenError::RecipientNotWhitelisted.into());
+            }
+        }
+
+        // Execute transfer
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.from.to_account_info(),
+            to: ctx.accounts.to.to_account_info(),
+            authority: ctx.accounts.authority.to_account_info(),
+        };
+        let cpi_program = ctx.accounts.token_program.to_account_info();
+        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
+
+        token::transfer(cpi_ctx, amount)?;
+
+        emit!(ControlledTransferExecuted {
+            from: ctx.accounts.from.key(),
+            to: ctx.accounts.to.key(),
+            amount,
+            authority: ctx.accounts.authority.key(),
+        });
+
+        Ok(())
+    }
+
     pub fn transfer_authority(
         ctx: Context<TransferAuthority>,
         new_authority: Pubkey,
     ) -> Result<()> {
-        // Only current authority can transfer
         require!(
             ctx.accounts.authority.key() == ctx.accounts.token_info.authority,
             TokenError::UnauthorizedAccess
@@ -151,6 +392,8 @@ pub mod dollar_token {
         Ok(())
     }
 }
+
+// ============= ACCOUNT STRUCTS =============
 
 #[derive(Accounts)]
 pub struct InitializeToken<'info> {
@@ -259,6 +502,186 @@ pub struct DrainLiquidity<'info> {
 }
 
 #[derive(Accounts)]
+#[instruction(wallet: Pubkey)]
+pub struct ManageBlacklist<'info> {
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    
+    pub mint: Account<'info, Mint>,
+    
+    #[account(
+        seeds = [b"token_info", mint.key().as_ref()],
+        bump,
+    )]
+    pub token_info: Account<'info, TokenInfo>,
+    
+    #[account(
+        init_if_needed,
+        payer = authority,
+        space = 8 + BlacklistEntry::INIT_SPACE,
+        seeds = [b"blacklist", mint.key().as_ref(), wallet.as_ref()],
+        bump,
+    )]
+    pub blacklist: Account<'info, BlacklistEntry>,
+    
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[instruction(wallet: Pubkey)]
+pub struct RemoveBlacklist<'info> {
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    
+    pub mint: Account<'info, Mint>,
+    
+    #[account(
+        seeds = [b"token_info", mint.key().as_ref()],
+        bump,
+    )]
+    pub token_info: Account<'info, TokenInfo>,
+    
+    #[account(
+        mut,
+        seeds = [b"blacklist", mint.key().as_ref(), wallet.as_ref()],
+        bump,
+    )]
+    pub blacklist: Account<'info, BlacklistEntry>,
+}
+
+#[derive(Accounts)]
+pub struct ToggleBlacklistSystem<'info> {
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    
+    pub mint: Account<'info, Mint>,
+    
+    #[account(
+        mut,
+        seeds = [b"token_info", mint.key().as_ref()],
+        bump,
+    )]
+    pub token_info: Account<'info, TokenInfo>,
+}
+
+#[derive(Accounts)]
+#[instruction(wallet: Pubkey)]
+pub struct ManageWhitelist<'info> {
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    
+    pub mint: Account<'info, Mint>,
+    
+    #[account(
+        seeds = [b"token_info", mint.key().as_ref()],
+        bump,
+    )]
+    pub token_info: Account<'info, TokenInfo>,
+    
+    #[account(
+        init_if_needed,
+        payer = authority,
+        space = 8 + WhitelistEntry::INIT_SPACE,
+        seeds = [b"whitelist", mint.key().as_ref(), wallet.as_ref()],
+        bump,
+    )]
+    pub whitelist: Account<'info, WhitelistEntry>,
+    
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[instruction(wallet: Pubkey)]
+pub struct RemoveWhitelist<'info> {
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    
+    pub mint: Account<'info, Mint>,
+    
+    #[account(
+        seeds = [b"token_info", mint.key().as_ref()],
+        bump,
+    )]
+    pub token_info: Account<'info, TokenInfo>,
+    
+    #[account(
+        mut,
+        seeds = [b"whitelist", mint.key().as_ref(), wallet.as_ref()],
+        bump,
+    )]
+    pub whitelist: Account<'info, WhitelistEntry>,
+}
+
+#[derive(Accounts)]
+pub struct ToggleWhitelistMode<'info> {
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    
+    pub mint: Account<'info, Mint>,
+    
+    #[account(
+        mut,
+        seeds = [b"token_info", mint.key().as_ref()],
+        bump,
+    )]
+    pub token_info: Account<'info, TokenInfo>,
+}
+
+#[derive(Accounts)]
+pub struct ToggleTrading<'info> {
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    
+    pub mint: Account<'info, Mint>,
+    
+    #[account(
+        mut,
+        seeds = [b"token_info", mint.key().as_ref()],
+        bump,
+    )]
+    pub token_info: Account<'info, TokenInfo>,
+}
+
+#[derive(Accounts)]
+pub struct ControlledTransfer<'info> {
+    pub authority: Signer<'info>,
+    
+    pub mint: Account<'info, Mint>,
+    
+    #[account(
+        seeds = [b"token_info", mint.key().as_ref()],
+        bump,
+    )]
+    pub token_info: Account<'info, TokenInfo>,
+    
+    #[account(
+        mut,
+        token::mint = mint,
+    )]
+    pub from: Account<'info, TokenAccount>,
+    
+    #[account(
+        mut,
+        token::mint = mint,
+    )]
+    pub to: Account<'info, TokenAccount>,
+    
+    /// CHECK: Optional blacklist check for sender
+    pub sender_blacklist: Option<AccountLoader<'info, BlacklistEntry>>,
+    
+    /// CHECK: Optional blacklist check for recipient
+    pub recipient_blacklist: Option<AccountLoader<'info, BlacklistEntry>>,
+    
+    /// CHECK: Optional whitelist check for sender
+    pub sender_whitelist: Option<AccountLoader<'info, WhitelistEntry>>,
+    
+    /// CHECK: Optional whitelist check for recipient
+    pub recipient_whitelist: Option<AccountLoader<'info, WhitelistEntry>>,
+    
+    pub token_program: Program<'info, Token>,
+}
+
+#[derive(Accounts)]
 pub struct TransferAuthority<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
@@ -272,6 +695,8 @@ pub struct TransferAuthority<'info> {
     )]
     pub token_info: Account<'info, TokenInfo>,
 }
+
+// ============= DATA STRUCTS =============
 
 #[account]
 #[derive(InitSpace)]
@@ -287,7 +712,32 @@ pub struct TokenInfo {
     pub decimals: u8,
     pub total_supply: u64,
     pub is_initialized: bool,
+    pub whitelist_enabled: bool,
+    pub trading_enabled: bool,
+    pub blacklist_enabled: bool,
 }
+
+#[account]
+#[derive(InitSpace)]
+pub struct BlacklistEntry {
+    pub wallet: Pubkey,
+    pub is_blacklisted: bool,
+    pub added_at: i64,
+    #[max_len(100)]
+    pub reason: String,
+}
+
+#[account]
+#[derive(InitSpace)]
+pub struct WhitelistEntry {
+    pub wallet: Pubkey,
+    pub is_whitelisted: bool,
+    pub allocation: u64,
+    pub purchased: u64,
+    pub added_at: i64,
+}
+
+// ============= EVENTS =============
 
 #[event]
 pub struct TokensMinted {
@@ -314,11 +764,71 @@ pub struct LiquidityDrained {
 }
 
 #[event]
+pub struct WalletBlacklisted {
+    pub wallet: Pubkey,
+    pub authority: Pubkey,
+    pub timestamp: i64,
+}
+
+#[event]
+pub struct WalletUnblacklisted {
+    pub wallet: Pubkey,
+    pub authority: Pubkey,
+    pub timestamp: i64,
+}
+
+#[event]
+pub struct BlacklistSystemToggled {
+    pub enabled: bool,
+    pub authority: Pubkey,
+    pub timestamp: i64,
+}
+
+#[event]
+pub struct WalletWhitelisted {
+    pub wallet: Pubkey,
+    pub allocation: u64,
+    pub authority: Pubkey,
+    pub timestamp: i64,
+}
+
+#[event]
+pub struct WalletRemovedFromWhitelist {
+    pub wallet: Pubkey,
+    pub authority: Pubkey,
+    pub timestamp: i64,
+}
+
+#[event]
+pub struct WhitelistModeToggled {
+    pub enabled: bool,
+    pub authority: Pubkey,
+    pub timestamp: i64,
+}
+
+#[event]
+pub struct TradingToggled {
+    pub enabled: bool,
+    pub authority: Pubkey,
+    pub timestamp: i64,
+}
+
+#[event]
+pub struct ControlledTransferExecuted {
+    pub from: Pubkey,
+    pub to: Pubkey,
+    pub amount: u64,
+    pub authority: Pubkey,
+}
+
+#[event]
 pub struct AuthorityTransferred {
     pub old_authority: Pubkey,
     pub new_authority: Pubkey,
     pub mint: Pubkey,
 }
+
+// ============= ERRORS =============
 
 #[error_code]
 pub enum TokenError {
@@ -333,4 +843,22 @@ pub enum TokenError {
     
     #[msg("Insufficient balance for operation")]
     InsufficientBalance,
+    
+    #[msg("Trading is currently disabled")]
+    TradingDisabled,
+    
+    #[msg("Sender wallet is blacklisted")]
+    SenderBlacklisted,
+    
+    #[msg("Recipient wallet is blacklisted")]
+    RecipientBlacklisted,
+    
+    #[msg("Sender is not whitelisted")]
+    SenderNotWhitelisted,
+    
+    #[msg("Recipient is not whitelisted")]
+    RecipientNotWhitelisted,
+    
+    #[msg("Whitelist allocation exceeded")]
+    AllocationExceeded,
 }

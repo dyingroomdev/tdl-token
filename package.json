@@ -7,15 +7,24 @@
     "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
     "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check",
     "test": "anchor test",
+    "test:access": "anchor test tests/access-control.ts",
     "build": "anchor build",
     "deploy:devnet": "anchor deploy --provider.cluster devnet",
-    "client": "ts-node client/interact.ts"
+    "client": "ts-node client/interact.ts",
+    "distribute": "ts-node client/distribution.ts",
+    "access-demo": "ts-node client/access-control.ts",
+    "manage": "ts-node scripts/manage-access.ts",
+    "status": "ts-node scripts/manage-access.ts status",
+    "blacklist": "ts-node scripts/manage-access.ts blacklist",
+    "whitelist": "ts-node scripts/manage-access.ts whitelist",
+    "emergency-pause": "ts-node scripts/manage-access.ts emergency-pause"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.29.0",
     "@solana/spl-token": "^0.3.8",
     "@solana/web3.js": "^1.87.6",
-    "bn.js": "^5.2.1"
+    "bn.js": "^5.2.1",
+    "commander": "^11.1.0"
   },
   "devDependencies": {
     "@types/bn.js": "^5.1.0",
@@ -30,7 +39,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/dollar-token"
+    "url": "https://github.com/dyingroomdev/dollar-token"
   },
   "author": "Your Name",
   "license": "MIT"
