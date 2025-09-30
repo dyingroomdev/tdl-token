@@ -1,0 +1,30 @@
+{
+  "name": "Dollar Token",
+  "symbol": "TDL",
+  "description": "Dollar Token (TDL)",
+  "image": "https://raw.githubusercontent.com/dyingroomdev/tdl-token/refs/heads/master/assets/logo.svg",
+  "external_url": "https://github.com/dyingroomdev/tdl-token",
+  "attributes": [
+    {
+      "trait_type": "Total Supply",
+      "value": "100,000,000"
+    },
+    {
+      "trait_type": "Network",
+      "value": "Solana"
+    },
+    {
+      "trait_type": "Type",
+      "value": "SPL Token"
+    }
+  ],
+  "properties": {
+    "files": [
+      {
+        "uri": "https://raw.githubusercontent.com/dyingroomdev/tdl-token/refs/heads/master/assets/logo.svg",
+        "type": "image/svg+xml"
+      }
+    ],
+    "category": "token"
+  }
+}
