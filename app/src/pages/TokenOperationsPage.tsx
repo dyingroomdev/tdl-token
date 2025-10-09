@@ -1,15 +1,13 @@
-import { AdminPanel } from "../components/presale/AdminPanel";
+import { TokenOperationsPanel } from "../components/token/TokenOperationsPanel";
 import { StatusCard } from "../components/presale/StatusCard";
 import { ApiKeyBanner } from "../components/admin/ApiKeyBanner";
-import { LaunchChecklist } from "../components/admin/LaunchChecklist";
 
-export const AdminPage = () => {
+export const TokenOperationsPage = () => {
   return (
     <div className="space-y-8">
       <ApiKeyBanner />
       <StatusCard />
-      <LaunchChecklist />
-      <AdminPanel />
+      <TokenOperationsPanel />
     </div>
   );
-};
+}

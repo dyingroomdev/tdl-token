@@ -102,6 +102,9 @@ npm install
 # Install web DApp dependencies
 npm install --prefix app
 
+# Install backend API dependencies
+npm install --prefix backend
+
 # (Optional) install Anchor CLI locally
 cargo install --git https://github.com/coral-xyz/anchor anchor-cli --locked
 ```
@@ -111,6 +114,11 @@ cargo install --git https://github.com/coral-xyz/anchor anchor-cli --locked
 ```bash
 # Launch the presale DApp (default port 5173)
 npm run app:dev
+
+# Launch backend API (default port 4000)
+cp backend/.env.example backend/.env
+vi backend/.env
+npm run dev --prefix backend
 
 # Configure environment (fill with devnet addresses)
 cp app/.env.example app/.env
@@ -220,6 +228,17 @@ A React + Vite dashboard lives in `app/` featuring:
 - Admin console for pause, whitelist uploads, and treasury withdrawals
 
 Configure via `app/.env` (see `.env.example`) and launch locally with `npm run app:dev`.
+
+Set `VITE_BACKEND_URL` to the Express API host (defaults to `http://localhost:4000`).
+
+### Backend API
+
+- Express + TypeScript service located in `backend/` for presale status, whitelist import, and pause/withdraw controls.
+- Report endpoints: `GET /reports/summary` (JSON) and `/reports/summary.csv` (CSV download).
+- Automation route `POST /operations/hardening` triggers the mint audit script.
+- Requires a signer (`backend/service-keypair.json`) whose public key matches `PRESALE_AUTHORITY`.
+- Protect endpoints using the `x-api-key` header defined in `backend/.env`.
+- Start locally with `npm run dev --prefix backend` (after configuring environment variables).
 
 ---
 

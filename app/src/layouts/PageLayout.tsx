@@ -9,7 +9,9 @@ type PageLayoutProps = {
 
 const NAV_LINKS = [
   { label: "Presale", href: "/presale" },
-  { label: "Admin", href: "/presale/admin" },
+  { label: "Presale Admin", href: "/admin/presale" },
+  { label: "Token Ops", href: "/admin/token" },
+  { label: "Reports", href: "/admin/reports" },
 ];
 
 export const PageLayout = ({ children }: PageLayoutProps) => {
