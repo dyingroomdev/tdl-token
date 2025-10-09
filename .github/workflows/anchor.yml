@@ -1,0 +1,50 @@
+name: anchor
+
+on:
+  push:
+    paths:
+      - "programs/**"
+      - "Anchor.toml"
+      - "Cargo.*"
+      - "**/Cargo.toml"
+      - "**/Cargo.lock"
+  pull_request:
+    paths:
+      - "programs/**"
+      - "Anchor.toml"
+      - "Cargo.*"
+      - "**/Cargo.toml"
+      - "**/Cargo.lock"
+
+jobs:
+  anchor-test:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dsherret/rust-toolchain-file@v1
+
+      - name: Install Solana CLI
+        run: |
+          sh -c "$(curl -sSfL https://release.solana.com/v1.17.16/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+
+      - name: Install Anchor CLI
+        run: |
+          cargo install --git https://github.com/coral-xyz/anchor anchor-cli --locked
+
+      - name: Install Node dependencies
+        run: npm install
+
+      - name: Build Anchor programs
+        run: anchor build
+
+      - name: Run Anchor tests
+        run: anchor test
+

@@ -1,0 +1,15 @@
+{
+  "priceNumerator": "2",
+  "priceDenominator": "1000",
+  "softCap": "100000000000",
+  "hardCap": "500000000000",
+  "walletMin": "50000000",
+  "walletMax": "5000000000",
+  "startTs": 1735689600,
+  "endTs": 1736377200,
+  "tgeBps": 200,
+  "cliffSeconds": 2592000,
+  "vestingSeconds": 7776000,
+  "whitelistEnabled": false,
+  "buyCooldownSeconds": 60
+}

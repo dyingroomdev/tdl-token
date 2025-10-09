@@ -1,0 +1,19 @@
+[package]
+name = "tdl-presale"
+version = "0.1.0"
+description = "TDL token presale program"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "tdl_presale"
+
+[features]
+no-entrypoint = []
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+cpi = ["no-entrypoint"]
+default = []
+
+[dependencies]
+anchor-lang = { version = "0.31.1", features = ["init-if-needed"] }
+anchor-spl = { version = "0.31.1", features = ["token", "associated_token"] }

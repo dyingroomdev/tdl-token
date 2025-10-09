@@ -1,7 +1,7 @@
 {
   "name": "Dollar Token",
   "symbol": "TDL",
-  "description": "Dollar Token (TDL) - Solana SPL token with 100M fixed supply",
+  "description": "Dollar Token (TDL) - Solana SPL token with 100M fixed supply for presale and structured distribution",
   "image": "https://raw.githubusercontent.com/dyingroomdev/tdl-token/refs/heads/master/assets/logo.png",
   "external_url": "https://github.com/dyingroomdev/tdl-token",
   "attributes": [

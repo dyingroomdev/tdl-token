@@ -1,17 +1,21 @@
 [toolchain]
+anchor_version = "0.31.1"
 
 [features]
 resolution = true
 skip-lint = false
 
 [programs.localnet]
-dollar_token = "11111111111111111111111111111111"
+dollar_token = "FtAWkh8vpT1DvULYhhtYZhYNuobPmeizR5kbmD4jMy48"
+tdl_presale = "D4Yy14wWkvDBy9wq1PLwPaAvTd26tgQ8UMxq71sDjKhW"
 
 [programs.devnet]
-dollar_token = "11111111111111111111111111111111"
+dollar_token = "FtAWkh8vpT1DvULYhhtYZhYNuobPmeizR5kbmD4jMy48"
+tdl_presale = "D4Yy14wWkvDBy9wq1PLwPaAvTd26tgQ8UMxq71sDjKhW"
 
 [programs.mainnet]
-dollar_token = "11111111111111111111111111111111"
+dollar_token = "FtAWkh8vpT1DvULYhhtYZhYNuobPmeizR5kbmD4jMy48"
+tdl_presale = "D4Yy14wWkvDBy9wq1PLwPaAvTd26tgQ8UMxq71sDjKhW"
 
 [registry]
 url = "https://api.apr.dev"

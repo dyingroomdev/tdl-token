@@ -1,10 +1,9 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
-    associated_token::AssociatedToken,
     token::{self, Mint, Token, TokenAccount, Transfer, MintTo, Burn},
 };
 
-declare_id!("11111111111111111111111111111111");
+declare_id!("FtAWkh8vpT1DvULYhhtYZhYNuobPmeizR5kbmD4jMy48");
 
 #[program]
 pub mod dollar_token {
@@ -303,23 +302,21 @@ pub mod dollar_token {
             TokenError::TradingDisabled
         );
 
-        // Check blacklist for sender
+        // Check blacklist for sender (if account provided)
         if token_info.blacklist_enabled {
             if let Some(sender_blacklist) = &ctx.accounts.sender_blacklist {
-                let sender_blacklist_data = sender_blacklist.load()?;
                 require!(
-                    !sender_blacklist_data.is_blacklisted,
+                    !sender_blacklist.is_blacklisted,
                     TokenError::SenderBlacklisted
                 );
             }
         }
 
-        // Check blacklist for recipient
+        // Check blacklist for recipient (if account provided)
         if token_info.blacklist_enabled {
             if let Some(recipient_blacklist) = &ctx.accounts.recipient_blacklist {
-                let recipient_blacklist_data = recipient_blacklist.load()?;
                 require!(
-                    !recipient_blacklist_data.is_blacklisted,
+                    !recipient_blacklist.is_blacklisted,
                     TokenError::RecipientBlacklisted
                 );
             }
@@ -327,21 +324,20 @@ pub mod dollar_token {
 
         // Check whitelist mode
         if token_info.whitelist_enabled {
-            // In whitelist mode, both sender and recipient must be whitelisted
+            // In whitelist mode, sender must be whitelisted
             if let Some(sender_whitelist) = &ctx.accounts.sender_whitelist {
-                let sender_whitelist_data = sender_whitelist.load()?;
                 require!(
-                    sender_whitelist_data.is_whitelisted,
+                    sender_whitelist.is_whitelisted,
                     TokenError::SenderNotWhitelisted
                 );
             } else {
                 return Err(TokenError::SenderNotWhitelisted.into());
             }
 
+            // Recipient must be whitelisted
             if let Some(recipient_whitelist) = &ctx.accounts.recipient_whitelist {
-                let recipient_whitelist_data = recipient_whitelist.load()?;
                 require!(
-                    recipient_whitelist_data.is_whitelisted,
+                    recipient_whitelist.is_whitelisted,
                     TokenError::RecipientNotWhitelisted
                 );
             } else {
@@ -667,16 +663,16 @@ pub struct ControlledTransfer<'info> {
     pub to: Account<'info, TokenAccount>,
     
     /// CHECK: Optional blacklist check for sender
-    pub sender_blacklist: Option<AccountLoader<'info, BlacklistEntry>>,
+    pub sender_blacklist: Option<Account<'info, BlacklistEntry>>,
     
     /// CHECK: Optional blacklist check for recipient
-    pub recipient_blacklist: Option<AccountLoader<'info, BlacklistEntry>>,
+    pub recipient_blacklist: Option<Account<'info, BlacklistEntry>>,
     
     /// CHECK: Optional whitelist check for sender
-    pub sender_whitelist: Option<AccountLoader<'info, WhitelistEntry>>,
+    pub sender_whitelist: Option<Account<'info, WhitelistEntry>>,
     
     /// CHECK: Optional whitelist check for recipient
-    pub recipient_whitelist: Option<AccountLoader<'info, WhitelistEntry>>,
+    pub recipient_whitelist: Option<Account<'info, WhitelistEntry>>,
     
     pub token_program: Program<'info, Token>,
 }

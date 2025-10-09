@@ -18,6 +18,7 @@ A professional-grade Solana SPL token with advanced access control features, bui
 - [Security](#security)
 - [Legal Disclaimer](#legal-disclaimer)
 - [Support](#support)
+- [Presale Program](#presale-program)
 
 ---
 
@@ -95,47 +96,60 @@ A professional-grade Solana SPL token with advanced access control features, bui
 git clone https://github.com/yourusername/dollar-token
 cd dollar-token
 
-# Run setup script
-chmod +x setup.sh
-./setup.sh
-
-# Install dependencies
+# Install root dependencies (programs, SDK, scripts)
 npm install
 
-# Build the program
-anchor build
+# Install web DApp dependencies
+npm install --prefix app
 
-# Run tests
+# (Optional) install Anchor CLI locally
+cargo install --git https://github.com/coral-xyz/anchor anchor-cli --locked
+```
+
+### Local Development
+
+```bash
+# Launch the presale DApp (default port 5173)
+npm run app:dev
+
+# Configure environment (fill with devnet addresses)
+cp app/.env.example app/.env
+vi app/.env
+
+# Build the web bundle
+npm run app:build
+
+# Run TypeScript compile checks and presale unit tests
+npx tsc --noEmit
+npx ts-mocha -p tsconfig.json -t 1000000 tests/presale/**/*.ts
+
+# Execute Anchor program tests
 anchor test
 ```
 
-### Deploy to Devnet
+### Devnet Deployment Snippets
 
 ```bash
-# Deploy
-./deploy.sh
+# Build + deploy the presale program (writes artifacts/addresses.*.json)
+npm run presale:deploy:devnet
 
-# Initialize token
-npm run client
+# Initialise a sale using configs/devnet.json
+npm run presale:init -- \
+  --tdl-mint <TDL_MINT> \
+  --pay-mint <PAY_MINT> \
+  --config configs/devnet.json
 
-# Setup distribution
-npm run distribute
-```
+# Import whitelist CSV and publish Merkle root
+npm run presale:whitelist -- \
+  --state <STATE_PDA> --csv data/whitelist.csv
 
-### Access Control Setup
+# Simulate buyer actions
+npm run presale:buy -- --state <STATE_PDA> --pay-mint <PAY_MINT> --amount 1000000
+npm run presale:claim -- --state <STATE_PDA> --tdl-mint <TDL_MINT>
+npm run presale:refund -- --state <STATE_PDA> --pay-mint <PAY_MINT>
 
-```bash
-# Setup anti-bot protection for launch
-npm run manage preset anti-bot
-
-# Add presale participants to whitelist
-npm run manage whitelist batch examples/whitelist-presale.json
-
-# Enable trading
-npm run manage trading true
-
-# Enable public trading after presale
-npm run manage preset public-launch
+# Generate postmortem report
+npm run presale:report -- --state <STATE_PDA> --format csv --out artifacts/report.csv
 ```
 
 ---
@@ -148,6 +162,14 @@ npm run manage preset public-launch
 2. **[Access Control Guide](ACCESS_CONTROL_GUIDE.md)** - How to use blacklist/whitelist features
 3. **[Launch Checklist](LAUNCH_CHECKLIST.md)** - Complete pre-launch checklist
 4. **[CLI Cheat Sheet](CLI_CHEATSHEET.md)** - Quick reference for all commands
+5. **[Contributing Guide](CONTRIBUTING.md)** - Local workflow & pull request checklist
+
+### Continuous Integration
+
+Two GitHub Actions enforce quality gates:
+
+- `.github/workflows/ci.yml` – installs dependencies, type-checks, builds the web app, and runs presale unit tests on every push/PR.
+- `.github/workflows/anchor.yml` – builds Anchor programs and executes `anchor test` whenever on-chain code changes.
 
 ### Key Files
 
@@ -155,20 +177,49 @@ npm run manage preset public-launch
 dollar-token-project/
 ├── programs/dollar-token/
 │   └── src/lib.rs              # Main Solana program
+├── programs/tdl_presale/       # Presale + vesting Anchor program
+│   ├── src/lib.rs              # On-chain logic (whitelist, vesting, refunds)
+│   └── Cargo.toml
 ├── client/
 │   ├── interact.ts             # Client for token operations
 │   ├── access-control.ts       # Access control manager
 │   └── distribution.ts         # Distribution setup
+├── sdk/
+│   ├── idl/tdl_presale.json    # Generated Anchor IDL
+│   ├── types/tdl_presale.ts    # Anchor type bindings
+│   └── index.ts                # SDK entrypoint
 ├── scripts/
 │   ├── manage-access.ts        # CLI tool for access control
 │   └── monitor.ts              # Real-time monitoring dashboard
 ├── tests/
-│   ├── dollar-token.ts         # Core functionality tests
-│   └── access-control.ts       # Access control tests
+│   ├── dollar-token.ts         # Core dollar token tests
+│   ├── access-control.ts       # Client access-control tests
+│   └── presale/presale.spec.ts # Presale + vesting coverage
 └── examples/
     ├── blacklist-bots.json     # Example blacklist
     └── whitelist-presale.json  # Example whitelist
-```
+
+## Presale Program
+
+The presale logic for vesting, whitelist management, and post-sale claims lives in the standalone Anchor program under `programs/tdl_presale`. Running `anchor build` emits the IDL to `sdk/idl/tdl_presale.json` and TypeScript bindings to `sdk/types/tdl_presale.ts`, which are re-exported via `sdk/index.ts` for use in downstream tooling.
+
+### Presale Tooling
+
+- **CLI (`scripts/presale-cli.ts`)** – wraps initialise, buy, claim, refund, whitelist, pause and reporting commands. Invoke with `npm run presale -- --help`.
+- **Automation scripts** – see `scripts/*.ts` for deploy, init, whitelist import, buy/claim simulations, refunds, and postmortem reports. All emit artefacts under `artifacts/`.
+- **SDK (`sdk/`)** – provides `TdlPresaleClient` helpers used by scripts, tests, and the DApp. Import via `@sdk` alias inside the app or from downstream packages.
+- **Tests (`tests/presale/presale.spec.ts`)** – mocha suite covering caps, whitelist enforcement, refunds, vesting, and guard controls. Run with `npx ts-mocha -p tsconfig.json -t 1000000 tests/presale/**/*.ts`.
+
+### Presale DApp
+
+A React + Vite dashboard lives in `app/` featuring:
+
+- Live sale status, timelines, and progress
+- Buyer participation form (whitelist-aware)
+- Vesting claims with real-time unlock calculations
+- Admin console for pause, whitelist uploads, and treasury withdrawals
+
+Configure via `app/.env` (see `.env.example`) and launch locally with `npm run app:dev`.
 
 ---
 

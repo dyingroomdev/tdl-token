@@ -1,0 +1,49 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - "*"
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Install dependencies (root)
+        run: |
+          npm install
+
+      - name: Install dependencies (app)
+        run: |
+          npm install
+        working-directory: app
+
+      - name: Lint TypeScript (root)
+        run: |
+          npx tsc --noEmit
+
+      - name: Lint TypeScript (app)
+        run: |
+          npm run build -- --mode development
+        working-directory: app
+
+      - name: Run presale tests
+        run: |
+          npm install --save-dev ts-node ts-mocha @types/mocha @types/chai
+          npx ts-mocha -p tsconfig.json -t 1000000 tests/presale/**/*.ts
+

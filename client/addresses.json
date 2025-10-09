@@ -1,0 +1,12 @@
+{
+  "programId": "FtAWkh8vpT1DvULYhhtYZhYNuobPmeizR5kbmD4jMy48",
+  "mint": "5YrWnZM5WcAzL5YjrzLpMzcY3Y5USgKTGvTW1ox84Vuu",
+  "tokenInfo": "BRVamMGvHxfMAXGsv76g9ouFdBrhd16MC3sn4omSpvTZ",
+  "authority": "BB6s8hpVk8YogJvGHWhpg1jf9Mz3gtnSQNVTtjBRANQV",
+  "network": "devnet",
+  "deploymentDate": "2025-09-30T13:39:24.493Z",
+  "explorerUrls": {
+    "program": "https://explorer.solana.com/address/FtAWkh8vpT1DvULYhhtYZhYNuobPmeizR5kbmD4jMy48?cluster=devnet",
+    "mint": "https://explorer.solana.com/address/5YrWnZM5WcAzL5YjrzLpMzcY3Y5USgKTGvTW1ox84Vuu?cluster=devnet"
+  }
+}

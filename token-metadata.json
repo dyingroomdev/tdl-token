@@ -1,0 +1,26 @@
+{
+  "name": "Dollar Token",
+  "symbol": "TDL",
+  "description": "Dollar Token (TDL) - A professional utility token on Solana.",
+  "image": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png",
+  "external_url": "https://splshield.com",
+  "attributes": [
+    {
+      "trait_type": "Total Supply",
+      "value": "100,000,000"
+    },
+    {
+      "trait_type": "Network",
+      "value": "Solana"
+    }
+  ],
+  "properties": {
+    "files": [
+      {
+        "uri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png",
+        "type": "image/png"
+      }
+    ],
+    "category": "currency"
+  }
+}
